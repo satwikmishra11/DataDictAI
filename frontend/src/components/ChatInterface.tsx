@@ -10,7 +10,8 @@ import {
   Mic, 
   Info,
   ChevronRight,
-  Database
+  Database,
+  Code
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -22,6 +23,7 @@ const ChatInterface = () => {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSqlMode, setIsSqlMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,8 +41,10 @@ const ChatInterface = () => {
     setInput('');
     setLoading(true);
 
+    const endpoint = isSqlMode ? `${API_BASE}/sql` : `${API_BASE}/chat`;
+
     try {
-      const res = await axios.post(`${API_BASE}/chat`, { query: input });
+      const res = await axios.post(endpoint, { query: input });
       setMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
     } catch (e) {
       setMessages(prev => [...prev, { role: 'bot', content: 'Network disruption detected. Please ensure the backend gateway is accessible.' }]);
@@ -80,22 +84,30 @@ const ChatInterface = () => {
         {/* Chat Header */}
         <div className="px-8 py-5 border-b border-surface-50 flex justify-between items-center bg-white/80 backdrop-blur-xl z-10">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-surface-900 rounded-xl flex items-center justify-center text-white shadow-xl shadow-surface-900/10">
-              <Sparkles size={20} className="text-brand-400" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-xl transition-colors ${isSqlMode ? 'bg-indigo-600 shadow-indigo-600/10' : 'bg-surface-900 shadow-surface-900/10'}`}>
+              {isSqlMode ? <Code size={20} /> : <Sparkles size={20} className="text-brand-400" />}
             </div>
             <div>
               <h3 className="text-sm font-bold text-surface-900 tracking-tight">Gemini 1.5 Copilot</h3>
               <p className="text-[10px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse"></span> Ultra Low Latency
+                <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse"></span> {isSqlMode ? 'SQL Generator Active' : 'Natural Language Active'}
               </p>
             </div>
           </div>
-          <button 
-            onClick={() => setMessages([messages[0]])}
-            className="p-2.5 hover:bg-surface-50 rounded-xl text-surface-300 hover:text-surface-600 transition-all"
-          >
-            <RefreshCcw size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsSqlMode(!isSqlMode)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all ${isSqlMode ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-surface-200 text-surface-500 hover:bg-surface-50'}`}
+            >
+              <Code size={14} /> SQL Mode
+            </button>
+            <button 
+              onClick={() => setMessages([messages[0]])}
+              className="p-2.5 hover:bg-surface-50 rounded-xl text-surface-300 hover:text-surface-600 transition-all"
+            >
+              <RefreshCcw size={18} />
+            </button>
+          </div>
         </div>
         
         {/* Messages Area */}
@@ -116,7 +128,7 @@ const ChatInterface = () => {
                     ? 'bg-brand-600 text-white rounded-tr-none' 
                     : 'bg-white text-surface-700 border border-surface-50 rounded-tl-none'
                 }`}>
-                  {msg.content}
+                  {msg.content.includes("SELECT") || msg.content.includes("CREATE") ? <pre className="font-mono text-xs overflow-x-auto">{msg.content}</pre> : msg.content}
                 </div>
               </div>
             </motion.div>
@@ -145,7 +157,7 @@ const ChatInterface = () => {
             </div>
             <input 
               className="w-full pl-16 pr-32 py-5 bg-surface-50 border border-surface-200 rounded-[24px] focus:outline-none focus:ring-4 focus:ring-brand-500/5 focus:bg-white focus:border-brand-500 transition-all text-sm font-medium" 
-              placeholder="Query your enterprise data landscape..."
+              placeholder={isSqlMode ? "Describe the query you need (e.g. 'Show me top customers by revenue')..." : "Query your enterprise data landscape..."}
               value={input}
               onChange={e => setInput(e.target.value)}
             />
@@ -156,7 +168,7 @@ const ChatInterface = () => {
                 disabled={!input.trim() || loading}
                 className="p-3 bg-surface-900 text-white rounded-2xl hover:bg-brand-600 disabled:opacity-30 transition-all shadow-xl shadow-surface-900/10 flex items-center gap-2 group-hover:px-6"
               >
-                {!loading && <span className="hidden group-hover:block text-xs font-bold uppercase tracking-widest overflow-hidden whitespace-nowrap">Ask Copilot</span>}
+                {!loading && <span className="hidden group-hover:block text-xs font-bold uppercase tracking-widest overflow-hidden whitespace-nowrap">{isSqlMode ? 'Generate SQL' : 'Ask Copilot'}</span>}
                 {loading ? <RefreshCcw size={18} className="animate-spin" /> : <ChevronRight size={18} />}
               </button>
             </div>

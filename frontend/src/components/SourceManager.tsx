@@ -16,6 +16,13 @@ import { motion } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
+const placeholders = {
+  postgres: "postgresql://user:password@localhost:5432/dbname",
+  mysql: "mysql+pymysql://user:password@localhost:3306/dbname",
+  snowflake: "snowflake://user:password@account/dbname/schema?warehouse=warehouse&role=role",
+  mssql: "mssql+pyodbc://user:password@localhost/dbname?driver=ODBC+Driver+17+for+SQL+Server"
+};
+
 const SourceManager = () => {
   const [sources, setSources] = useState([]);
   const [name, setName] = useState('');
@@ -90,7 +97,7 @@ const SourceManager = () => {
                 <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">Secure DSN</label>
                 <textarea 
                   className="input-field font-mono text-[13px] leading-relaxed" 
-                  placeholder="postgresql://user:pass@host:5432/db" 
+                  placeholder={placeholders[dbType]} 
                   rows={4}
                   value={connectionUrl} 
                   onChange={e => setConnectionUrl(e.target.value)} 

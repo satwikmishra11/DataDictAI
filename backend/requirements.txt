@@ -2,6 +2,9 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
+pymysql
+snowflake-sqlalchemy
+pyodbc
 celery
 redis
 pandas

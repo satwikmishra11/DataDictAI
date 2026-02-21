@@ -51,7 +51,7 @@ def process_database_extraction(source_id: int):
                 profile = {}
 
             # 3. Generate AI summary
-            summary = AIService.generate_summary(schema_info)
+            summary = AIService.generate_summary(schema_info, profile_stats=profile)
 
             # 4. Save to DB
             metadata_record = db.query(SchemaMetadata).filter(

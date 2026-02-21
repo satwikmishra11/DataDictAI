@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Database, Table, Activity, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -28,14 +28,15 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const [sources, setSources] = useState([]);
+  const [stats, setStats] = useState({ sources: 0, tables: 0, pii_columns: 0, health_score: 100 });
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/sources`);
-        setSources(res.data);
+        const statsRes = await axios.get(`${API_BASE}/stats`);
+        setStats(statsRes.data);
+        
         // Mock data for visualization
         setChartData([
           { name: 'Mon', count: 4000, active: 2400 },
@@ -69,10 +70,10 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Connected Sources" value={sources.length} icon={Database} color="text-brand-600" subtitle="Synced 5m ago" />
-        <StatCard title="Scanned Tables" value="1,284" icon={Table} color="text-indigo-600" subtitle="+12 this week" />
-        <StatCard title="Data Integrity" value="99.4%" icon={ShieldCheck} color="text-emerald-600" subtitle="All checks passed" />
-        <StatCard title="Active Queries" value="48" icon={Activity} color="text-brand-500" subtitle="Average latency 40ms" />
+        <StatCard title="Connected Sources" value={stats.sources} icon={Database} color="text-brand-600" subtitle="Synced 5m ago" />
+        <StatCard title="Scanned Tables" value={stats.tables.toLocaleString()} icon={Table} color="text-indigo-600" subtitle="+12 this week" />
+        <StatCard title="Data Integrity" value={`${stats.health_score}%`} icon={ShieldCheck} color="text-emerald-600" subtitle="All checks passed" />
+        <StatCard title="PII Columns Detected" value={stats.pii_columns} icon={Activity} color="text-brand-500" subtitle="Review required" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

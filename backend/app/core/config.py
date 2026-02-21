@@ -1,31 +1,31 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "DataDictAI"
     API_V1_STR: str = "/api/v1"
     
     # Database
-    POSTGRES_SERVER: str = "db"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "datadictai"
+    POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "datadictai")
+    POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5433") # Local port
     SQLALCHEMY_DATABASE_URI: str | None = None
 
     # Celery
-    CELERY_BROKER_URL: str = "redis://redis:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
+    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 
     # MinIO
-    MINIO_ENDPOINT: str = "minio:9000"
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_BUCKET_NAME: str = "datadict-artifacts"
 
-    # LLM Keys (to be provided via env)
-    OPENAI_API_KEY: str | None = None
-    ANTHROPIC_API_KEY: str | None = None
-    GOOGLE_API_KEY: str | None = None
+    # LLM Keys
+    GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
 
     class Config:
         env_file = ".env"
@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.SQLALCHEMY_DATABASE_URI:
-            self.SQLALCHEMY_DATABASE_URI = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+            # If we are inside docker, POSTGRES_SERVER is 'db' and port is 5432
+            # If we are outside docker, POSTGRES_SERVER is 'localhost' and port is 5433
+            port = "5432" if self.POSTGRES_SERVER == "db" else self.POSTGRES_PORT
+            self.SQLALCHEMY_DATABASE_URI = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{port}/{self.POSTGRES_DB}"
 
 settings = Settings()

@@ -1,10 +1,17 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from app.core.config import settings
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import json
 
 class AIService:
     @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type(Exception),
+        retry_error_callback=lambda state: "AI Summary temporarily unavailable due to high traffic. Retrying..."
+    )
     def generate_summary(schema_info: dict, profile_stats: dict = None) -> str:
         stats_context = ""
         if profile_stats:
@@ -21,20 +28,18 @@ class AIService:
         Your summary must include:
         1. **Business Purpose**: What real-world entity or process does this table represent?
         2. **Key Metrics**: Potential KPIs derived from this data (e.g., "Monthly Revenue", "Active Users").
-        3. **Data Quality Insights**: Comment on the health of the data based on the provided metrics (e.g., "High null rate in 'email' column suggests optional field").
+        3. **Data Quality Insights**: Comment on the health of the data based on the provided metrics.
         4. **Usage Recommendations**: How should analysts join or filter this table?
         
         Format as Markdown.
         """)
         
         if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
+            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
         else:
             return "AI Summary unavailable (No Gemini API Key provided)."
             
         chain = prompt | llm
-        # Extract just the relevant parts for the prompt to avoid token limits if necessary
-        # For now, pass the full schema info.
         response = chain.invoke({
             "table_name": schema_info.get("table_name"),
             "columns": schema_info.get("columns"),
@@ -44,6 +49,11 @@ class AIService:
         return response.content
 
     @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(Exception)
+    )
     def answer_query(query: str, schema_context: str) -> str:
         prompt = ChatPromptTemplate.from_template("""
         You are a helpful data assistant.
@@ -52,11 +62,11 @@ class AIService:
         
         User Question: {query}
         
-        Answer the question based on the schema. If the user asks for a query, provide a valid SQL query (assume PostgreSQL dialect unless specified).
+        Answer the question based on the schema. If the user asks for a query, provide a valid SQL query.
         """)
         
         if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
+            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
         else:
             return "AI Query unavailable."
             
@@ -65,6 +75,11 @@ class AIService:
         return response.content
 
     @staticmethod
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(Exception)
+    )
     def generate_sql(query: str, schema_context: str) -> str:
         prompt = ChatPromptTemplate.from_template("""
         You are an expert SQL developer. Generate a SQL query for the following request.
@@ -78,7 +93,7 @@ class AIService:
         """)
         
         if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
+            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
         else:
             return "-- AI SQL unavailable."
             

@@ -55,6 +55,10 @@ class MetadataService:
                         
                         try:
                             fks = inspector.get_foreign_keys(table_name, schema=schema_name)
+                            # Ensure schema_name is in the relationship for lineage accuracy
+                            for fk in fks:
+                                if not fk.get('referred_schema'):
+                                    fk['referred_schema'] = schema_name
                         except:
                             fks = []
                         
@@ -95,10 +99,15 @@ class MetadataService:
                 }
                 
                 if pd.api.types.is_numeric_dtype(series):
+                    mean_val = series.mean()
+                    min_val = series.min()
+                    max_val = series.max()
+                    
+                    # Replace NaN with None for JSON compatibility
                     stats.update({
-                        "mean": float(series.mean()) if not series.isnull().all() else 0,
-                        "min": float(series.min()) if not series.isnull().all() else 0,
-                        "max": float(series.max()) if not series.isnull().all() else 0,
+                        "mean": float(mean_val) if not pd.isna(mean_val) else None,
+                        "min": float(min_val) if not pd.isna(min_val) else None,
+                        "max": float(max_val) if not pd.isna(max_val) else None,
                     })
                 
                 profile[col] = stats

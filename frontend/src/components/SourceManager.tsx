@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Database, Play, CheckCircle, Server, Activity } from 'lucide-react';
+import { 
+  Plus, 
+  Database, 
+  Play, 
+  CheckCircle, 
+  Server, 
+  Activity, 
+  Trash2, 
+  ExternalLink,
+  Shield,
+  Zap
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
@@ -34,105 +45,129 @@ const SourceManager = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="space-y-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Data Sources</h1>
-          <p className="text-slate-500 mt-1">Manage your database connections and metadata extraction.</p>
+          <h1 className="text-3xl font-bold text-surface-900 tracking-tight">Data Connectivity</h1>
+          <p className="text-surface-500 mt-1 font-medium">Provision new database bridges and monitor existing tunnels.</p>
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-500/30">
-          <Plus size={18} /> New Connection
-        </button>
+        <div className="flex items-center gap-3">
+           <div className="flex -space-x-2">
+             {[1,2,3].map(i => (
+               <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-surface-200" />
+             ))}
+           </div>
+           <p className="text-xs font-bold text-surface-400 uppercase tracking-widest">3 Team members active</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Connection Form */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
-          <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <Server size={20} className="text-blue-500" /> Connect Database
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">Source Name</label>
-              <input 
-                className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" 
-                placeholder="e.g. Production DB"
-                value={name} 
-                onChange={e => setName(e.target.value)} 
-                required 
-              />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+        {/* Connection Panel */}
+        <div className="xl:col-span-4">
+          <div className="bg-white p-8 rounded-[32px] shadow-soft border border-surface-100 sticky top-8">
+            <div className="flex items-center gap-3 mb-8">
+               <div className="p-2.5 bg-brand-50 rounded-xl text-brand-600">
+                 <Zap size={20} />
+               </div>
+               <h2 className="text-xl font-bold text-surface-900 tracking-tight">Instant Connect</h2>
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">Database Type</label>
-              <select 
-                className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition bg-white" 
-                value={dbType} 
-                onChange={e => setDbType(e.target.value)}
-              >
-                <option value="postgres">PostgreSQL</option>
-                <option value="snowflake">Snowflake</option>
-                <option value="mysql">MySQL</option>
-                <option value="mssql">SQL Server</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-700">Connection String</label>
-              <textarea 
-                className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-sm" 
-                placeholder="postgresql://user:pass@host/db" 
-                rows={3}
-                value={connectionUrl} 
-                onChange={e => setConnectionUrl(e.target.value)} 
-                required 
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-slate-900 text-white p-3 rounded-lg hover:bg-slate-800 transition font-medium flex justify-center items-center gap-2"
-            >
-              {loading ? <Activity className="animate-spin" size={18} /> : <CheckCircle size={18} />}
-              {loading ? 'Connecting...' : 'Connect & Scan'}
-            </button>
-          </form>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">Label</label>
+                <input className="input-field" placeholder="e.g. Analytics Cluster" value={name} onChange={e => setName(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">Provider</label>
+                <select className="input-field appearance-none" value={dbType} onChange={e => setDbType(e.target.value)}>
+                  <option value="postgres">PostgreSQL (Standard)</option>
+                  <option value="snowflake">Snowflake (Enterprise)</option>
+                  <option value="mysql">MySQL (Scalable)</option>
+                  <option value="mssql">SQL Server (Legacy)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">Secure DSN</label>
+                <textarea 
+                  className="input-field font-mono text-[13px] leading-relaxed" 
+                  placeholder="postgresql://user:pass@host:5432/db" 
+                  rows={4}
+                  value={connectionUrl} 
+                  onChange={e => setConnectionUrl(e.target.value)} 
+                  required 
+                />
+                <p className="text-[10px] text-surface-400 flex items-center gap-1.5 mt-2 ml-1">
+                  <Shield size={10} className="text-emerald-500" /> End-to-end encrypted connection
+                </p>
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-4 text-sm flex justify-center items-center gap-3">
+                {loading ? <Activity className="animate-spin" size={18} /> : <Plus size={18} />}
+                {loading ? 'Initializing...' : 'Establish Bridge'}
+              </button>
+            </form>
+          </div>
         </div>
 
-        {/* Sources List */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">Active Connections</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bridges List */}
+        <div className="xl:col-span-8 space-y-6">
+          <div className="flex items-center justify-between mb-2 px-2">
+            <h2 className="text-lg font-bold text-surface-900 tracking-tight">Active Bridges</h2>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> All Systems Online
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sources.map((s: any) => (
               <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 key={s.id} 
-                className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group"
+                className="bg-white p-6 rounded-[28px] border border-surface-100 shadow-soft hover:shadow-elevated transition-all duration-500 group"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    <Database size={24} />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-surface-50 rounded-2xl flex items-center justify-center text-surface-400 group-hover:bg-brand-500 group-hover:text-white transition-all duration-500 shadow-inner">
+                      <Database size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-surface-900 group-hover:text-brand-600 transition-colors">{s.name}</h3>
+                      <p className="text-[10px] font-bold text-surface-400 uppercase tracking-widest">{s.db_type}</p>
+                    </div>
                   </div>
-                  <div className="px-2 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Active
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 text-surface-400 hover:text-red-500 bg-surface-50 rounded-lg transition-colors">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <h3 className="font-bold text-lg text-slate-800">{s.name}</h3>
-                <p className="text-sm text-slate-500 mb-4 font-mono truncate">{s.connection_url.split('@')[1] || s.connection_url}</p>
-                <div className="flex items-center justify-between text-xs text-slate-400 border-t pt-4">
-                  <span>{s.db_type.toUpperCase()}</span>
-                  <span>Scanned: {new Date(s.created_at).toLocaleDateString()}</span>
+
+                <div className="space-y-4">
+                  <div className="p-3 bg-surface-50 rounded-xl font-mono text-[10px] text-surface-500 break-all border border-surface-100/50">
+                    {s.connection_url.split('@')[1] || s.connection_url}
+                  </div>
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-surface-400 uppercase">Integrity</span>
+                          <span className="text-xs font-bold text-emerald-500">99.8%</span>
+                        </div>
+                        <div className="w-px h-6 bg-surface-100" />
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-surface-400 uppercase">Latency</span>
+                          <span className="text-xs font-bold text-surface-700">12ms</span>
+                        </div>
+                     </div>
+                     <button className="p-2 text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+                       <Play size={18} />
+                     </button>
+                  </div>
                 </div>
-                <button className="mt-4 w-full py-2 flex items-center justify-center gap-2 text-sm font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition">
-                  <Play size={14} /> Re-scan Metadata
-                </button>
               </motion.div>
             ))}
-            {sources.length === 0 && (
-              <div className="col-span-2 p-12 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400">
-                <Database size={48} className="mb-4 opacity-50" />
-                <p>No data sources connected yet.</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

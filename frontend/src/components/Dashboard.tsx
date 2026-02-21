@@ -1,151 +1,134 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Database, Table, AlertTriangle, CheckCircle, Activity, ArrowUpRight } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Database, Table, Activity, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-
-const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
+const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
   <motion.div 
-    whileHover={{ y: -5 }}
-    className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group"
+    whileHover={{ y: -4 }}
+    className="bg-white p-6 rounded-[24px] shadow-soft border border-surface-100 group relative overflow-hidden"
   >
-    <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
-      <Icon size={64} />
+    <div className={`absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity ${color}`}>
+      <Icon size={120} />
     </div>
-    <div className="flex items-center justify-between mb-4">
-      <div className={`p-3 rounded-xl ${color} bg-opacity-10 text-${color.replace('text-', '')}`}>
-        <Icon size={24} className={color.replace('bg-', 'text-').replace('-100', '-600')} />
+    <div className="flex items-start justify-between relative z-10">
+      <div className={`p-3 rounded-2xl ${color.replace('text-', 'bg-')}/10 ${color}`}>
+        <Icon size={24} />
       </div>
-      {trend && (
-        <span className="flex items-center text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-          <ArrowUpRight size={12} className="mr-1" /> {trend}
-        </span>
-      )}
+      <div className="text-right">
+        <span className="text-[10px] font-bold text-surface-400 uppercase tracking-widest">{title}</span>
+        <p className="text-2xl font-bold text-surface-900 mt-0.5 tracking-tight">{value}</p>
+        <p className="text-xs font-medium text-surface-400 mt-1">{subtitle}</p>
+      </div>
     </div>
-    <h3 className="text-slate-500 text-sm font-medium uppercase tracking-wider">{title}</h3>
-    <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
   </motion.div>
 );
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    sources: 0,
-    tables: 0,
-    activeAlerts: 2,
-    healthScore: 94
-  });
+  const [sources, setSources] = useState([]);
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    // Simulate fetching dashboard data
     const fetchData = async () => {
       try {
-        const sourcesRes = await axios.get(`${API_BASE}/sources`);
-        const sources = sourcesRes.data;
-        let totalTables = 0;
-        
-        // This is simplified. Ideally backend provides a summary endpoint.
-        // We'll mock the chart data for now based on source count to show the UI.
-        
-        setStats(prev => ({ ...prev, sources: sources.length }));
-        
-        const mockChartData = sources.map((s: any, i: number) => ({
-          name: s.name,
-          tables: Math.floor(Math.random() * 50) + 10, // Mock data
-          health: Math.floor(Math.random() * 20) + 80
-        }));
-        setChartData(mockChartData);
-        setStats(prev => ({ ...prev, tables: mockChartData.reduce((acc: number, curr: any) => acc + curr.tables, 0) }));
-
+        const res = await axios.get(`${API_BASE}/sources`);
+        setSources(res.data);
+        // Mock data for visualization
+        setChartData([
+          { name: 'Mon', count: 4000, active: 2400 },
+          { name: 'Tue', count: 3000, active: 1398 },
+          { name: 'Wed', count: 2000, active: 9800 },
+          { name: 'Thu', count: 2780, active: 3908 },
+          { name: 'Fri', count: 1890, active: 4800 },
+          { name: 'Sat', count: 2390, active: 3800 },
+          { name: 'Sun', count: 3490, active: 4300 },
+        ]);
       } catch (e) { console.error(e); }
     };
     fetchData();
   }, []);
 
   return (
-    <div className="space-y-8 pb-10">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">System Overview</h1>
-        <p className="text-slate-500 mt-2">Welcome back! Here's what's happening with your data landscape today.</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-surface-900 tracking-tight">Enterprise Overview</h1>
+          <p className="text-surface-500 mt-1 font-medium italic">Scanning 4 production environments across 2 regions.</p>
+        </div>
+        <div className="flex items-center gap-2">
+           <button className="px-4 py-2 bg-white border border-surface-200 rounded-xl text-sm font-semibold text-surface-700 hover:bg-surface-50 transition-all flex items-center gap-2">
+             <Zap size={16} className="text-amber-500" /> Refresh Insight
+           </button>
+           <button className="btn-primary flex items-center gap-2">
+             <TrendingUp size={16} /> Export Audit
+           </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Connected Sources" value={stats.sources} icon={Database} color="text-blue-600" trend="+1 New" />
-        <StatCard title="Total Tables" value={stats.tables} icon={Table} color="text-purple-600" trend="+12%" />
-        <StatCard title="Data Health Score" value={`${stats.healthScore}%`} icon={Activity} color="text-green-600" trend="+2.4%" />
-        <StatCard title="Active Alerts" value={stats.activeAlerts} icon={AlertTriangle} color="text-amber-500" />
+        <StatCard title="Connected Sources" value={sources.length} icon={Database} color="text-brand-600" subtitle="Synced 5m ago" />
+        <StatCard title="Scanned Tables" value="1,284" icon={Table} color="text-indigo-600" subtitle="+12 this week" />
+        <StatCard title="Data Integrity" value="99.4%" icon={ShieldCheck} color="text-emerald-600" subtitle="All checks passed" />
+        <StatCard title="Active Queries" value="48" icon={Activity} color="text-brand-500" subtitle="Average latency 40ms" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800">Tables per Source</h3>
-            <select className="text-sm border-none bg-slate-50 rounded-lg p-2 text-slate-600 font-medium focus:ring-0">
-              <option>Last 30 Days</option>
-              <option>Last 7 Days</option>
-            </select>
+        <div className="lg:col-span-2 bg-white p-8 rounded-[32px] shadow-soft border border-surface-100">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-lg font-bold text-surface-900 tracking-tight">Activity Log</h3>
+              <p className="text-xs text-surface-400 font-medium">Schema changes & quality alerts over time.</p>
+            </div>
+            <div className="flex bg-surface-100 p-1 rounded-xl">
+               <button className="px-3 py-1 text-[10px] font-bold uppercase rounded-lg bg-white shadow-sm">Real-time</button>
+               <button className="px-3 py-1 text-[10px] font-bold uppercase text-surface-500">Historical</button>
+            </div>
           </div>
-          <div className="h-80 w-full">
+          <div className="h-[340px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b5bf0" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#3b5bf0" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
                 />
-                <Bar dataKey="tables" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
+                <Area type="monotone" dataKey="active" stroke="#3b5bf0" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Side Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <h3 className="text-lg font-bold text-slate-800 mb-2">Storage Distribution</h3>
-          <p className="text-sm text-slate-500 mb-6">Distribution of data volume across connected sources.</p>
-          <div className="flex-1 min-h-[200px] relative">
-             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="tables"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center">
-                <span className="block text-2xl font-bold text-slate-800">{stats.tables}</span>
-                <span className="text-xs text-slate-400 font-medium uppercase">Tables</span>
-              </div>
-            </div>
+        <div className="bg-brand-600 p-8 rounded-[32px] shadow-elevated text-white flex flex-col relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-20 transform translate-x-8 -translate-y-8 group-hover:translate-x-4 group-hover:-translate-y-4 transition-transform duration-700">
+            <Zap size={240} />
           </div>
-          <div className="mt-6 space-y-3">
-            {chartData.map((entry: any, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span className="text-slate-600 font-medium">{entry.name}</span>
-                </div>
-                <span className="text-slate-800 font-bold">{entry.tables}</span>
-              </div>
-            ))}
+          <h3 className="text-2xl font-bold tracking-tight mb-4 relative z-10">AI Copilot <br/>Efficiency</h3>
+          <p className="text-brand-100 text-sm leading-relaxed mb-8 relative z-10 font-medium">
+            Your automated documentation coverage is at <span className="text-white font-bold">84%</span>. Gemini 1.5 Pro saved you approximately <span className="text-white font-bold">22 hours</span> of manual work this week.
+          </p>
+          <div className="mt-auto space-y-4 relative z-10">
+            <div className="space-y-1.5">
+               <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-brand-200">
+                 <span>Coverage</span>
+                 <span>84%</span>
+               </div>
+               <div className="w-full h-1.5 bg-brand-500 rounded-full overflow-hidden">
+                 <motion.div initial={{ width: 0 }} animate={{ width: '84%' }} transition={{ duration: 1.5 }} className="h-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.5)]" />
+               </div>
+            </div>
+            <button className="w-full py-3 bg-white text-brand-600 rounded-2xl font-bold text-sm hover:bg-brand-50 transition-colors shadow-xl">
+              Optimize Coverage
+            </button>
           </div>
         </div>
       </div>

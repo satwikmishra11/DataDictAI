@@ -46,7 +46,6 @@ def get_schema(source_id: int, db: Session = Depends(get_db)):
 def chat(query: ChatQuery, db: Session = Depends(get_db)):
     # Simple context: all table names and their summaries
     metadata = db.query(SchemaMetadata).all()
-    context = "
-".join([f"Table: {m.table_name}, Summary: {m.ai_summary}" for m in metadata])
+    context = "\n".join([f"Table: {m.table_name}, Summary: {m.ai_summary}" for m in metadata])
     response = AIService.answer_query(query.query, context)
     return {"response": response}

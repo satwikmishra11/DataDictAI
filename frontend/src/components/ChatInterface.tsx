@@ -1,13 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { MessageSquare, Send, User, Bot, Sparkles, RefreshCcw } from 'lucide-react';
+import { 
+  Send, 
+  User, 
+  Bot, 
+  Sparkles, 
+  RefreshCcw, 
+  Paperclip, 
+  Mic, 
+  Info,
+  ChevronRight,
+  Database
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([
-    { role: 'bot', content: 'Hello! I am your AI Data Assistant. I can help you understand your schema, write SQL queries, or find specific data points. What would you like to know?' }
+    { role: 'bot', content: "I'm your enterprise data copilot. I have indexed all your schemas and I'm ready to help you navigate your data landscape. You can ask me to explain tables, write complex joins, or find data anomalies." }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,94 +43,125 @@ const ChatInterface = () => {
       const res = await axios.post(`${API_BASE}/chat`, { query: input });
       setMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Sorry, I encountered an error. Please check your connection and try again.' }]);
+      setMessages(prev => [...prev, { role: 'bot', content: 'Network disruption detected. Please ensure the backend gateway is accessible.' }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden relative">
-      {/* Chat Header */}
-      <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-200">
-            <Sparkles size={20} />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-800">AI Data Assistant</h3>
-            <p className="text-xs text-slate-500 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Online & Ready
-            </p>
-          </div>
+    <div className="max-w-5xl mx-auto h-[calc(100vh-140px)] flex gap-8">
+      {/* Left Sidebar: Context & Shortcuts */}
+      <div className="hidden xl:flex flex-col w-64 space-y-6">
+        <div className="bg-white p-6 rounded-[28px] shadow-soft border border-surface-100">
+           <h3 className="text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-4">Active Context</h3>
+           <div className="space-y-3">
+              <div className="flex items-center gap-3 p-2 bg-brand-50 rounded-xl text-brand-600">
+                <Database size={16} />
+                <span className="text-xs font-bold">Production DB</span>
+              </div>
+              <div className="flex items-center gap-3 p-2 text-surface-400 hover:text-surface-600 transition-colors cursor-pointer">
+                <Info size={16} />
+                <span className="text-xs font-bold">Schema Docs</span>
+              </div>
+           </div>
         </div>
-        <button 
-          onClick={() => setMessages([messages[0]])}
-          className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors" title="Reset Chat"
-        >
-          <RefreshCcw size={18} />
-        </button>
-      </div>
-      
-      {/* Messages Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
-        {messages.map((msg, i) => (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            key={i} 
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={`max-w-[80%] flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm ${msg.role === 'user' ? 'bg-white border-blue-100' : 'bg-indigo-600 border-indigo-600'}`}>
-                {msg.role === 'user' ? <User size={16} className="text-blue-600" /> : <Bot size={16} className="text-white" />}
-              </div>
-              <div className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-none' 
-                  : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
-              }`}>
-                {msg.content}
-              </div>
-            </div>
-          </motion.div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-                <Bot size={16} className="text-white" />
-              </div>
-              <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center gap-2">
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-75"></span>
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-150"></span>
-              </div>
-            </div>
-          </div>
-        )}
+
+        <div className="bg-brand-600 p-6 rounded-[28px] shadow-elevated text-white">
+           <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Pro Tip</p>
+           <p className="text-xs leading-relaxed font-medium text-brand-50">
+             Try: "List all tables related to customer orders and their primary keys."
+           </p>
+        </div>
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 bg-white border-t border-slate-100">
-        <form onSubmit={sendMessage} className="relative flex items-center">
-          <input 
-            className="w-full pl-5 pr-14 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white transition-all shadow-inner text-sm" 
-            placeholder="Ask a question about your data..."
-            value={input}
-            onChange={e => setInput(e.target.value)}
-          />
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-white rounded-[32px] shadow-soft border border-surface-100 overflow-hidden relative">
+        {/* Chat Header */}
+        <div className="px-8 py-5 border-b border-surface-50 flex justify-between items-center bg-white/80 backdrop-blur-xl z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-surface-900 rounded-xl flex items-center justify-center text-white shadow-xl shadow-surface-900/10">
+              <Sparkles size={20} className="text-brand-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-surface-900 tracking-tight">Gemini 1.5 Copilot</h3>
+              <p className="text-[10px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse"></span> Ultra Low Latency
+              </p>
+            </div>
+          </div>
           <button 
-            type="submit"
-            disabled={!input.trim() || loading}
-            className="absolute right-2 p-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 transition-all shadow-md shadow-blue-200"
+            onClick={() => setMessages([messages[0]])}
+            className="p-2.5 hover:bg-surface-50 rounded-xl text-surface-300 hover:text-surface-600 transition-all"
           >
-            <Send size={18} />
+            <RefreshCcw size={18} />
           </button>
-        </form>
-        <p className="text-center text-xs text-slate-400 mt-2">
-          AI can make mistakes. Please verify critical information.
-        </p>
+        </div>
+        
+        {/* Messages Area */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-8 bg-surface-50/20">
+          {messages.map((msg, i) => (
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              key={i} 
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`max-w-[85%] flex gap-5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-sm ${msg.role === 'user' ? 'bg-white border-brand-100' : 'bg-surface-900 border-surface-900'}`}>
+                  {msg.role === 'user' ? <User size={18} className="text-brand-600" /> : <Bot size={18} className="text-brand-400" />}
+                </div>
+                <div className={`p-5 rounded-[24px] shadow-soft text-sm leading-relaxed font-medium ${
+                  msg.role === 'user' 
+                    ? 'bg-brand-600 text-white rounded-tr-none' 
+                    : 'bg-white text-surface-700 border border-surface-50 rounded-tl-none'
+                }`}>
+                  {msg.content}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="flex gap-5">
+                <div className="w-9 h-9 rounded-xl bg-surface-900 flex items-center justify-center shrink-0 shadow-xl shadow-surface-900/10">
+                  <Bot size={18} className="text-brand-400" />
+                </div>
+                <div className="bg-white px-6 py-4 rounded-[24px] rounded-tl-none border border-surface-50 shadow-soft flex items-center gap-2">
+                  <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-brand-400 rounded-full"></motion.span>
+                  <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-brand-400 rounded-full"></motion.span>
+                  <motion.span animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-brand-400 rounded-full"></motion.span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input Dock */}
+        <div className="p-8 bg-white border-t border-surface-50">
+          <form onSubmit={sendMessage} className="relative group">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 px-2 border-r border-surface-100">
+               <Paperclip size={18} className="text-surface-300 hover:text-surface-500 cursor-pointer transition-colors" />
+            </div>
+            <input 
+              className="w-full pl-16 pr-32 py-5 bg-surface-50 border border-surface-200 rounded-[24px] focus:outline-none focus:ring-4 focus:ring-brand-500/5 focus:bg-white focus:border-brand-500 transition-all text-sm font-medium" 
+              placeholder="Query your enterprise data landscape..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3">
+               <Mic size={18} className="text-surface-300 hover:text-surface-500 cursor-pointer hidden sm:block" />
+               <button 
+                type="submit"
+                disabled={!input.trim() || loading}
+                className="p-3 bg-surface-900 text-white rounded-2xl hover:bg-brand-600 disabled:opacity-30 transition-all shadow-xl shadow-surface-900/10 flex items-center gap-2 group-hover:px-6"
+              >
+                {!loading && <span className="hidden group-hover:block text-xs font-bold uppercase tracking-widest overflow-hidden whitespace-nowrap">Ask Copilot</span>}
+                {loading ? <RefreshCcw size={18} className="animate-spin" /> : <ChevronRight size={18} />}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

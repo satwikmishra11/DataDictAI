@@ -1,5 +1,4 @@
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from app.core.config import settings
 
@@ -18,13 +17,10 @@ class AIService:
         3. Usage recommendations.
         """)
         
-        # Use OpenAI or Anthropic based on availability
-        if settings.OPENAI_API_KEY:
-            llm = ChatOpenAI(api_key=settings.OPENAI_API_KEY)
-        elif settings.ANTHROPIC_API_KEY:
-            llm = ChatAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        if settings.GOOGLE_API_KEY:
+            llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
         else:
-            return "AI Summary unavailable (No API Keys provided)."
+            return "AI Summary unavailable (No Gemini API Key provided)."
             
         chain = prompt | llm
         response = chain.invoke(schema_info)
@@ -39,8 +35,8 @@ class AIService:
         Answer the question based on the database schema provided.
         """)
         
-        if settings.OPENAI_API_KEY:
-            llm = ChatOpenAI(api_key=settings.OPENAI_API_KEY)
+        if settings.GOOGLE_API_KEY:
+            llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=settings.GOOGLE_API_KEY)
         else:
             return "AI Query unavailable."
             

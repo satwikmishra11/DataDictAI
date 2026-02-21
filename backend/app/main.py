@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-# from app.api.v1.api import api_router  # To be implemented
+from app.api.v1.api import router as api_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -21,4 +21,4 @@ app.add_middleware(
 def root():
     return {"message": "Welcome to DataDictAI API"}
 
-# app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router, prefix=settings.API_V1_STR)

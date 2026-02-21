@@ -9,6 +9,7 @@ numpy
 langchain
 langchain-openai
 langchain-anthropic
+langchain-google-genai
 python-multipart
 pydantic-settings
 alembic

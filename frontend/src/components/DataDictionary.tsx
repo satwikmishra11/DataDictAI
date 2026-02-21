@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Table, Search, ChevronRight, BarChart, Info } from 'lucide-react';
+import { Table, Search, Filter, BarChart, Info, MoreHorizontal, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
@@ -33,113 +34,161 @@ const DataDictionary = () => {
     }
   }, [selectedSourceId]);
 
-  const filteredSchema = schema.filter(t => 
+  const filteredSchema = schema.filter((t: any) => 
     t.table_name.toLowerCase().includes(search.toLowerCase()) ||
     t.ai_summary.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Data Dictionary</h1>
-        <div className="flex gap-4">
-          <select 
-            className="p-2 border rounded bg-white" 
-            value={selectedSourceId} 
-            onChange={e => setSelectedSourceId(e.target.value)}
-          >
-            {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <div className="relative">
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
             <input 
-              className="pl-10 pr-4 py-2 border rounded-lg bg-white" 
-              placeholder="Search tables or columns..." 
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm" 
+              placeholder="Search tables, columns..." 
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <button className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+            <Filter size={18} />
+          </button>
+        </div>
+        
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <span className="text-sm font-medium text-slate-500">Source:</span>
+          <select 
+            className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-500" 
+            value={selectedSourceId} 
+            onChange={e => setSelectedSourceId(e.target.value)}
+          >
+            {sources.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
         </div>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {filteredSchema.map((table, idx) => (
-          <div key={idx} className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            {/* Header */}
-            <div className="p-4 bg-slate-50 border-b flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                  <Table size={20} />
+      <div className="space-y-6">
+        {filteredSchema.map((table: any, idx) => (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            key={idx} 
+            className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
+          >
+            {/* Table Header */}
+            <div className="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600">
+                  <Table size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 uppercase tracking-tight">
-                    {table.schema_name}.{table.table_name}
+                  <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                    {table.table_name}
+                    <span className="text-xs font-normal text-slate-400 px-2 py-0.5 border rounded-full bg-white">
+                      {table.schema_name}
+                    </span>
                   </h3>
+                  <p className="text-sm text-slate-500 mt-1 flex items-center gap-4">
+                    <span>{table.columns?.length} Columns</span>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span>Last updated 2 days ago</span>
+                  </p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase">
-                Active
-              </span>
+              <button className="text-slate-400 hover:text-slate-600">
+                <MoreHorizontal size={20} />
+              </button>
             </div>
 
             <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Summary */}
-              <div className="lg:col-span-2">
-                <div className="flex items-center gap-2 mb-3 text-blue-600 font-semibold uppercase text-xs tracking-wider">
-                  <Info size={14} /> AI Generated Summary
-                </div>
-                <div className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                  {table.ai_summary || "No summary available."}
+              {/* AI Summary Section */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-2 mb-2 text-blue-700 font-bold text-sm uppercase tracking-wide">
+                    <Info size={16} /> AI Insight
+                  </div>
+                  <p className="text-slate-700 leading-relaxed text-sm whitespace-pre-wrap">
+                    {table.ai_summary || "Analyzing table structure to generate insights..."}
+                  </p>
                 </div>
 
-                <div className="mt-6">
-                   <div className="flex items-center gap-2 mb-3 text-slate-600 font-semibold uppercase text-xs tracking-wider">
-                    Columns ({table.columns?.length})
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {table.columns?.slice(0, 10).map((col, cIdx) => (
-                      <div key={cIdx} className="p-2 bg-slate-50 rounded border text-sm flex justify-between">
-                        <span className="font-medium text-slate-700">{col.name}</span>
-                        <span className="text-slate-400 text-xs">{col.type}</span>
-                      </div>
-                    ))}
-                    {table.columns?.length > 10 && (
-                      <div className="p-2 text-slate-400 text-xs italic">
-                        + {table.columns.length - 10} more columns
-                      </div>
-                    )}
-                  </div>
+                <div>
+                   <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-3">Schema Structure</h4>
+                   <div className="overflow-x-auto">
+                     <table className="w-full text-sm text-left">
+                       <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b">
+                         <tr>
+                           <th className="px-4 py-3 font-medium">Column Name</th>
+                           <th className="px-4 py-3 font-medium">Type</th>
+                           <th className="px-4 py-3 font-medium">Nullable</th>
+                         </tr>
+                       </thead>
+                       <tbody>
+                         {table.columns?.slice(0, 5).map((col: any, cIdx: number) => (
+                           <tr key={cIdx} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
+                             <td className="px-4 py-3 font-medium text-slate-700">{col.name}</td>
+                             <td className="px-4 py-3 text-slate-500 font-mono text-xs">{col.type}</td>
+                             <td className="px-4 py-3 text-slate-500">
+                               {col.nullable ? 
+                                 <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded text-xs">Yes</span> : 
+                                 <span className="text-slate-400 bg-slate-100 px-2 py-0.5 rounded text-xs">No</span>
+                               }
+                             </td>
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                     {table.columns?.length > 5 && (
+                       <div className="p-2 text-center text-xs text-blue-600 font-medium cursor-pointer hover:bg-slate-50 transition-colors border-t">
+                         View all {table.columns.length} columns
+                       </div>
+                     )}
+                   </div>
                 </div>
               </div>
 
-              {/* Quality Metrics */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div className="flex items-center gap-2 mb-4 text-slate-600 font-semibold uppercase text-xs tracking-wider">
-                  <BarChart size={14} /> Data Quality Snapshot
-                </div>
-                <div className="space-y-4">
-                   {Object.entries(table.quality_metrics || {}).slice(0, 5).map(([col, metrics], mIdx) => (
-                     <div key={mIdx}>
-                       <div className="flex justify-between text-xs mb-1">
-                         <span className="font-medium text-slate-700 truncate">{col}</span>
-                         <span className="text-slate-500">{(100 - (metrics.null_rate * 100)).toFixed(1)}% Fill</span>
+              {/* Quality Sidebar */}
+              <div className="space-y-6">
+                <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm uppercase tracking-wide">
+                    <BarChart size={16} className="text-purple-500" /> Quality Health
+                  </div>
+                  <div className="space-y-4">
+                     {Object.entries(table.quality_metrics || {}).slice(0, 4).map(([col, metrics]: any, mIdx) => (
+                       <div key={mIdx} className="space-y-1">
+                         <div className="flex justify-between text-xs">
+                           <span className="font-medium text-slate-700 truncate max-w-[120px]">{col}</span>
+                           <span className="text-slate-500 font-mono">{(100 - (metrics.null_rate * 100)).toFixed(0)}%</span>
+                         </div>
+                         <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: `${(1 - (metrics.null_rate || 0)) * 100}%` }}
+                             className={`h-full rounded-full ${metrics.null_rate > 0.5 ? 'bg-red-400' : metrics.null_rate > 0.1 ? 'bg-amber-400' : 'bg-green-500'}`}
+                           />
+                         </div>
                        </div>
-                       <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                         <div 
-                           className="bg-blue-500 h-full rounded-full transition-all duration-1000" 
-                           style={{ width: `${(1 - (metrics.null_rate || 0)) * 100}%` }}
-                         />
-                       </div>
-                     </div>
-                   ))}
+                     ))}
+                  </div>
+                  <button className="mt-5 w-full py-2 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition flex items-center justify-center gap-1">
+                    Full Report <ArrowRight size={12} />
+                  </button>
                 </div>
-                <button className="mt-6 w-full text-center text-xs font-bold text-blue-600 uppercase hover:text-blue-700">
-                  View Full Profile
-                </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
+        {filteredSchema.length === 0 && (
+          <div className="text-center py-20 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+            <Search size={48} className="mx-auto mb-4 opacity-20" />
+            <p className="text-lg font-medium text-slate-600">No tables found</p>
+            <p className="text-sm">Try adjusting your search filters or select a different source.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+celery
+redis
+pandas
+numpy
+langchain
+langchain-openai
+langchain-anthropic
+python-multipart
+pydantic-settings
+alembic
+minio

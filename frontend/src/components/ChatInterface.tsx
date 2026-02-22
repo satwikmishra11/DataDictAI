@@ -38,17 +38,56 @@ const ChatInterface = () => {
 
     const userMsg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
+    const currentInput = input;
     setInput('');
     setLoading(true);
 
-    const endpoint = isSqlMode ? `${API_BASE}/sql` : `${API_BASE}/chat`;
+    if (isSqlMode) {
+      try {
+        const res = await axios.post(`${API_BASE}/sql`, { query: currentInput });
+        setMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
+      } catch (e) {
+        setMessages(prev => [...prev, { role: 'bot', content: 'SQL Generation encountered an error.' }]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
+    // Streaming for Chat Mode
     try {
-      const res = await axios.post(endpoint, { query: input });
-      setMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: currentInput }),
+      });
+
+      if (!response.body) throw new Error("No response body");
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let botResponse = "";
+      
+      // Add empty bot message to start streaming into
+      setMessages(prev => [...prev, { role: 'bot', content: "" }]);
+      setLoading(false); // Stop main loader once stream starts
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        botResponse += chunk;
+        
+        // Update the last message (the bot's streaming response)
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1].content = botResponse;
+          return newMsgs;
+        });
+      }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Network disruption detected. Please ensure the backend gateway is accessible.' }]);
-    } finally {
+      setMessages(prev => [...prev, { role: 'bot', content: 'Communication error. Please ensure the backend is available.' }]);
       setLoading(false);
     }
   };
@@ -88,9 +127,9 @@ const ChatInterface = () => {
               {isSqlMode ? <Code size={20} /> : <Sparkles size={20} className="text-brand-400" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-surface-900 tracking-tight">Gemini 1.5 Copilot</h3>
+              <h3 className="text-sm font-bold text-surface-900 tracking-tight">Gemini 2.0 Copilot</h3>
               <p className="text-[10px] text-surface-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse"></span> {isSqlMode ? 'SQL Generator Active' : 'Natural Language Active'}
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Streaming Engine Active
               </p>
             </div>
           </div>

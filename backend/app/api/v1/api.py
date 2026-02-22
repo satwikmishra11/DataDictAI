@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.db.session import SessionLocal
 from app.db.models import DatabaseSource, SchemaMetadata
 from pydantic import BaseModel
 from typing import List, Optional
-from app.worker import process_database_extraction
+from app.worker import process_database_extraction, sanitize_metrics
 from app.services.ai import AIService
+from app.services.metadata import MetadataService
 
 router = APIRouter()
 
@@ -84,16 +85,14 @@ def search_metadata(q: str = Query(...), db: Session = Depends(get_db)):
 
 @router.post("/chat")
 def chat(query: ChatQuery, db: Session = Depends(get_db)):
-    try:
-        metadata = db.query(SchemaMetadata).all()
-        context = "\n".join([f"Table: {m.table_name}, Summary: {m.ai_summary}" for m in metadata])
-        response = AIService.answer_query(query.query, context)
-        return {"response": response}
-    except Exception as e:
-        error_msg = str(e)
-        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            return {"response": "⚠️ **Gemini Free Tier Limit Reached.** I am currently rate-limited by Google. Please wait about 30-60 seconds and try your question again."}
-        return {"response": f"AI Assistant encountered an error: {error_msg}. Please check your API key or try again later."}
+    metadata = db.query(SchemaMetadata).all()
+    # Concise context to keep it fast
+    context = "\n".join([f"Table: {m.table_name}, Summary: {m.ai_summary}, Quality: {m.quality_metrics}" for m in metadata])
+    
+    return StreamingResponse(
+        AIService.stream_query(query.query, context),
+        media_type="text/plain"
+    )
 
 @router.post("/sql")
 def generate_sql(query: ChatQuery, db: Session = Depends(get_db)):
@@ -107,6 +106,25 @@ def generate_sql(query: ChatQuery, db: Session = Depends(get_db)):
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             return {"response": "-- AI Quota Reached. Please wait 60 seconds before generating more SQL."}
         return {"response": f"-- AI Error: {error_msg}"}
+
+@router.post("/profile/{metadata_id}")
+def re_profile_table(metadata_id: int, db: Session = Depends(get_db)):
+    metadata = db.query(SchemaMetadata).filter(SchemaMetadata.id == metadata_id).first()
+    if not metadata:
+        raise HTTPException(status_code=404, detail="Metadata record not found")
+    
+    source = db.query(DatabaseSource).filter(DatabaseSource.id == metadata.source_id).first()
+    
+    try:
+        # On-the-go statistical analysis
+        profile = MetadataService.profile_data(source.connection_url, metadata.schema_name, metadata.table_name)
+        profile = sanitize_metrics(profile)
+        
+        metadata.quality_metrics = profile
+        db.commit()
+        return {"message": "Table profiled successfully", "profile": profile}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/export/{source_id}/markdown")
 def export_markdown(source_id: int, db: Session = Depends(get_db)):
@@ -124,13 +142,24 @@ def export_markdown(source_id: int, db: Session = Depends(get_db)):
         md_content += f"## Table: {table.table_name}\n\n"
         md_content += f"### Summary\n{table.ai_summary}\n\n"
         md_content += "### Columns\n"
-        md_content += "| Name | Type | Tags |\n|------|------|------|\n"
+        md_content += "| Name | Type | Completeness | Uniqueness | Tags |\n|------|------|--------------|------------|------|\n"
         for col in (table.columns or []):
+            name = col['name']
+            stats = (table.quality_metrics or {}).get(name, {})
+            comp = f"{stats.get('completeness', 0)*100:.1f}%"
+            uniq = f"{stats.get('uniqueness_rate', 0)*100:.1f}%"
             tags = ", ".join(col.get("tags", []))
-            md_content += f"| {col['name']} | {col['type']} | {tags} |\n"
+            md_content += f"| {name} | {col['type']} | {comp} | {uniq} | {tags} |\n"
         md_content += "\n---\n\n"
         
     return Response(content=md_content, media_type="text/markdown", headers={"Content-Disposition": f"attachment; filename={source.name}_dictionary.md"})
+
+@router.post("/sync-all")
+def sync_all_sources(db: Session = Depends(get_db)):
+    sources = db.query(DatabaseSource).all()
+    for source in sources:
+        process_database_extraction.delay(source.id)
+    return {"message": f"Global sync triggered for {len(sources)} sources. Data will update sequentially."}
 
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
@@ -139,7 +168,7 @@ def get_stats(db: Session = Depends(get_db)):
     tables_count = len(all_metadata)
     
     pii_count = 0
-    total_null_rate = 0
+    total_completeness = 0
     total_cols = 0
     
     for table in all_metadata:
@@ -148,14 +177,15 @@ def get_stats(db: Session = Depends(get_db)):
             if col.get("tags") and len(col["tags"]) > 0:
                 pii_count += 1
         
-        # Health Calculation (100 - average null rate)
+        # Health Calculation based on Completeness
         if table.quality_metrics:
             for col_name, stats in table.quality_metrics.items():
-                total_null_rate += stats.get("null_rate", 0)
-                total_cols += 1
+                comp = stats.get("completeness")
+                if comp is not None:
+                    total_completeness += comp
+                    total_cols += 1
                 
-    avg_null_rate = (total_null_rate / total_cols * 100) if total_cols > 0 else 0
-    health_score = round(100 - avg_null_rate, 1)
+    health_score = round(total_completeness / total_cols * 100, 1) if total_cols > 0 else 100.0
                 
     return {
         "sources": sources_count,

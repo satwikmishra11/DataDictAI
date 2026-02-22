@@ -29,3 +29,28 @@ class SchemaMetadata(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     source = relationship("DatabaseSource", back_populates="schemas")
+    history = relationship("MetricHistory", back_populates="metadata_item")
+    alerts = relationship("Alert", back_populates="metadata_item")
+
+class MetricHistory(Base):
+    __tablename__ = "metric_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    metadata_id = Column(Integer, ForeignKey("schema_metadata.id"))
+    metrics = Column(JSON)
+    captured_at = Column(DateTime, default=datetime.utcnow)
+
+    metadata_item = relationship("SchemaMetadata", back_populates="history")
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    metadata_id = Column(Integer, ForeignKey("schema_metadata.id"))
+    alert_type = Column(String) # completeness, freshness, schema_change
+    message = Column(String)
+    severity = Column(String) # low, medium, high
+    is_resolved = Column(Integer, default=0) # 0 or 1 (boolean)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    metadata_item = relationship("SchemaMetadata", back_populates="alerts")

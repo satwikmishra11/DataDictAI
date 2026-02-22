@@ -1,102 +1,88 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from app.core.config import settings
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import json
 
 class AIService:
+    _llm_instance = None
+
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type(Exception),
-        retry_error_callback=lambda state: "AI Summary temporarily unavailable due to high traffic. Retrying..."
-    )
+    def _get_llm(streaming=False):
+        if not settings.GOOGLE_API_KEY: return None
+        return ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash", 
+            google_api_key=settings.GOOGLE_API_KEY,
+            streaming=streaming,
+            temperature=0.1 # Faster, more deterministic
+        )
+
+    @staticmethod
+    def stream_query(query: str, schema_context: str):
+        llm = AIService._get_llm(streaming=True)
+        if not llm: yield "Error: No API Key."; return
+
+        prompt = ChatPromptTemplate.from_template("""
+        You are an expert Data Engineer and Architect. Use the following schema context to answer the user's question accurately.
+        If the question is about data quality, use the provided metrics if available.
+        If the user asks for SQL, provide optimized and readable code.
+        
+        Context: {schema_context}
+        Query: {query}
+        
+        Answer professionally and concisely:
+        """)
+        chain = prompt | llm
+        
+        try:
+            for chunk in chain.stream({"query": query, "schema_context": schema_context}):
+                if chunk.content:
+                    yield chunk.content
+        except Exception as e:
+            yield f"Error: {str(e)}"
+
+    @staticmethod
     def generate_summary(schema_info: dict, profile_stats: dict = None) -> str:
-        stats_context = ""
-        if profile_stats:
-            stats_context = f"\nData Quality Metrics (Null Rates, Uniqueness):\n{json.dumps(profile_stats, indent=2)}"
-
+        llm = AIService._get_llm()
+        if not llm: return "AI Summary unavailable."
+        
         prompt = ChatPromptTemplate.from_template("""
-        You are a senior data engineer and business analyst. Generate a comprehensive, professional summary for the following database table.
+        Analyze the following database table metadata and profile statistics.
+        Generate a business-friendly summary and usage recommendations.
         
-        Table Name: {table_name}
-        Columns & Types: {columns}
-        Relationships: {relationships}
-        {stats_context}
+        Table: {table_name}
+        Columns: {columns}
+        Profile Data: {profile_stats}
         
-        Your summary must include:
-        1. **Business Purpose**: What real-world entity or process does this table represent?
-        2. **Key Metrics**: Potential KPIs derived from this data (e.g., "Monthly Revenue", "Active Users").
-        3. **Data Quality Insights**: Comment on the health of the data based on the provided metrics.
-        4. **Usage Recommendations**: How should analysts join or filter this table?
+        Format your response as Markdown:
+        ### Business Summary
+        (A clear explanation of what this table represents in business terms)
         
-        Format as Markdown.
+        ### Usage Recommendations
+        (How should data analysts or engineers use this table? Mention any quality caveats based on profile data)
         """)
         
-        if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
-        else:
-            return "AI Summary unavailable (No Gemini API Key provided)."
-            
         chain = prompt | llm
-        response = chain.invoke({
+        return chain.invoke({
             "table_name": schema_info.get("table_name"),
-            "columns": schema_info.get("columns"),
-            "relationships": schema_info.get("relationships"),
-            "stats_context": stats_context
-        })
-        return response.content
+            "columns": json.dumps(schema_info.get("columns")),
+            "profile_stats": json.dumps(profile_stats) if profile_stats else "No profile data available."
+        }).content
 
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)
-    )
     def answer_query(query: str, schema_context: str) -> str:
+        llm = AIService._get_llm()
+        if not llm: return "AI Query unavailable."
         prompt = ChatPromptTemplate.from_template("""
-        You are a helpful data assistant.
-        Context (Database Schema Summaries):
-        {schema_context}
+        Context: {schema_context}
+        Query: {query}
         
-        User Question: {query}
-        
-        Answer the question based on the schema. If the user asks for a query, provide a valid SQL query.
+        Answer based on the schema context. Be helpful and technical.
         """)
-        
-        if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
-        else:
-            return "AI Query unavailable."
-            
-        chain = prompt | llm
-        response = chain.invoke({"query": query, "schema_context": schema_context})
-        return response.content
+        return (prompt | llm).invoke({"query": query, "schema_context": schema_context}).content
 
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)
-    )
     def generate_sql(query: str, schema_context: str) -> str:
-        prompt = ChatPromptTemplate.from_template("""
-        You are an expert SQL developer. Generate a SQL query for the following request.
-        
-        Schema Context:
-        {schema_context}
-        
-        Request: {query}
-        
-        Return ONLY the SQL query in a code block. Do not add explanation.
-        """)
-        
-        if settings.GOOGLE_API_KEY:
-            llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=settings.GOOGLE_API_KEY)
-        else:
-            return "-- AI SQL unavailable."
-            
-        chain = prompt | llm
-        response = chain.invoke({"query": query, "schema_context": schema_context})
-        return response.content
+        llm = AIService._get_llm()
+        if not llm: return "-- SQL unavailable."
+        prompt = ChatPromptTemplate.from_template("Context: {schema_context}\nSQL for: {query}\nReturn ONLY code:")
+        return (prompt | llm).invoke({"query": query, "schema_context": schema_context}).content

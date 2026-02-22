@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Database, Table, Activity, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
+import { Database, Table, Activity, TrendingUp, ShieldCheck, Zap, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000/api/v1';
@@ -30,26 +30,43 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 const Dashboard = () => {
   const [stats, setStats] = useState({ sources: 0, tables: 0, pii_columns: 0, health_score: 100 });
   const [chartData, setChartData] = useState([]);
+  const [syncing, setSyncing] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const statsRes = await axios.get(`${API_BASE}/stats`);
+      setStats(statsRes.data);
+      
+      // Mock data for visualization
+      setChartData([
+        { name: 'Mon', count: 4000, active: 2400 },
+        { name: 'Tue', count: 3000, active: 1398 },
+        { name: 'Wed', count: 2000, active: 9800 },
+        { name: 'Thu', count: 2780, active: 3908 },
+        { name: 'Fri', count: 1890, active: 4800 },
+        { name: 'Sat', count: 2390, active: 3800 },
+        { name: 'Sun', count: 3490, active: 4300 },
+      ]);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleGlobalSync = async () => {
+    setSyncing(true);
+    try {
+      await axios.post(`${API_BASE}/sync-all`);
+      alert("Global sync triggered! Data will update in the background.");
+      fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const statsRes = await axios.get(`${API_BASE}/stats`);
-        setStats(statsRes.data);
-        
-        // Mock data for visualization
-        setChartData([
-          { name: 'Mon', count: 4000, active: 2400 },
-          { name: 'Tue', count: 3000, active: 1398 },
-          { name: 'Wed', count: 2000, active: 9800 },
-          { name: 'Thu', count: 2780, active: 3908 },
-          { name: 'Fri', count: 1890, active: 4800 },
-          { name: 'Sat', count: 2390, active: 3800 },
-          { name: 'Sun', count: 3490, active: 4300 },
-        ]);
-      } catch (e) { console.error(e); }
-    };
     fetchData();
+    const interval = setInterval(fetchData, 10000); // Polling for updates
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -57,11 +74,16 @@ const Dashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-surface-900 tracking-tight">Enterprise Overview</h1>
-          <p className="text-surface-500 mt-1 font-medium italic">Scanning 4 production environments across 2 regions.</p>
+          <p className="text-surface-500 mt-1 font-medium italic">Monitoring documentation coverage across all nodes.</p>
         </div>
         <div className="flex items-center gap-2">
-           <button className="px-4 py-2 bg-white border border-surface-200 rounded-xl text-sm font-semibold text-surface-700 hover:bg-surface-50 transition-all flex items-center gap-2">
-             <Zap size={16} className="text-amber-500" /> Refresh Insight
+           <button 
+            onClick={handleGlobalSync}
+            disabled={syncing}
+            className="px-4 py-2 bg-white border border-surface-200 rounded-xl text-sm font-semibold text-surface-700 hover:bg-surface-50 transition-all flex items-center gap-2"
+           >
+             <RefreshCw size={16} className={`${syncing ? 'animate-spin' : ''} text-amber-500`} /> 
+             {syncing ? 'Syncing...' : 'Global Refresh'}
            </button>
            <button className="btn-primary flex items-center gap-2">
              <TrendingUp size={16} /> Export Audit
@@ -70,10 +92,10 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Connected Sources" value={stats.sources} icon={Database} color="text-brand-600" subtitle="Synced 5m ago" />
-        <StatCard title="Scanned Tables" value={stats.tables.toLocaleString()} icon={Table} color="text-indigo-600" subtitle="+12 this week" />
-        <StatCard title="Data Integrity" value={`${stats.health_score}%`} icon={ShieldCheck} color="text-emerald-600" subtitle="All checks passed" />
-        <StatCard title="PII Columns Detected" value={stats.pii_columns} icon={Activity} color="text-brand-500" subtitle="Review required" />
+        <StatCard title="Connected Sources" value={stats.sources} icon={Database} color="text-brand-600" subtitle="Total DB Bridges" />
+        <StatCard title="Scanned Tables" value={stats.tables.toLocaleString()} icon={Table} color="text-indigo-600" subtitle="Indexed Entities" />
+        <StatCard title="Data Health" value={`${stats.health_score}%`} icon={ShieldCheck} color="text-emerald-600" subtitle="Integrity Score" />
+        <StatCard title="PII Alerts" value={stats.pii_columns} icon={Activity} color="text-brand-500" subtitle="Sensitive Fields" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -115,7 +137,7 @@ const Dashboard = () => {
           </div>
           <h3 className="text-2xl font-bold tracking-tight mb-4 relative z-10">AI Copilot <br/>Efficiency</h3>
           <p className="text-brand-100 text-sm leading-relaxed mb-8 relative z-10 font-medium">
-            Your automated documentation coverage is at <span className="text-white font-bold">84%</span>. Gemini 1.5 Pro saved you approximately <span className="text-white font-bold">22 hours</span> of manual work this week.
+            Your automated documentation coverage is at <span className="text-white font-bold">84%</span>. Gemini 2.0 Flash saved you approximately <span className="text-white font-bold">22 hours</span> of manual work this week.
           </p>
           <div className="mt-auto space-y-4 relative z-10">
             <div className="space-y-1.5">

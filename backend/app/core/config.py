@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 import os
 
 class Settings(BaseSettings):
@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "datadictai")
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5433") # Local port
-    SQLALCHEMY_DATABASE_URI: str | None = None
+    SQLALCHEMY_DATABASE_URI: Optional[str] = None
 
     # Celery
     CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
@@ -25,10 +25,11 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "datadict-artifacts"
 
     # LLM Keys
-    GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
+    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

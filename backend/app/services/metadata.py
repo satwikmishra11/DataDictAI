@@ -81,34 +81,56 @@ class MetadataService:
     def profile_data(connection_url: str, schema_name: str, table_name: str) -> Dict[str, Any]:
         try:
             engine = create_engine(connection_url)
-            query = text(f'SELECT * FROM "{schema_name}"."{table_name}" LIMIT 1000')
+            query = text(f'SELECT * FROM "{schema_name}"."{table_name}" LIMIT 5000') # Increased sample
             if "mysql" in connection_url:
-                 query = text(f'SELECT * FROM {schema_name}.{table_name} LIMIT 1000')
+                 query = text(f'SELECT * FROM {schema_name}.{table_name} LIMIT 5000')
 
             with engine.connect() as conn:
                 df = pd.read_sql(query, conn)
             
+            if df.empty:
+                return {"_status": "empty"}
+
             profile = {}
             for col in df.columns:
                 series = df[col]
-                # Basic stats
+                # Core Quality Metrics
                 stats = {
-                    "null_rate": float(series.isnull().mean()),
+                    "completeness": float(1.0 - series.isnull().mean()),
+                    "uniqueness_rate": float(series.nunique() / len(series)) if len(series) > 0 else 0,
                     "distinct_count": int(series.nunique()),
                     "type": str(series.dtype),
                 }
                 
+                # Freshness Detection (Time-based)
+                if pd.api.types.is_datetime64_any_dtype(series) or "date" in col.lower() or "time" in col.lower() or "created" in col.lower():
+                    try:
+                        ts_series = pd.to_datetime(series, errors='coerce').dropna()
+                        if not ts_series.empty:
+                            stats["max_timestamp"] = ts_series.max().isoformat()
+                            stats["min_timestamp"] = ts_series.min().isoformat()
+                            # Days since last update
+                            days_diff = (pd.Timestamp.now() - ts_series.max()).days
+                            stats["freshness_days"] = int(days_diff)
+                    except:
+                        pass
+
+                # Statistical Analysis for Numerics
                 if pd.api.types.is_numeric_dtype(series):
-                    mean_val = series.mean()
-                    min_val = series.min()
-                    max_val = series.max()
-                    
-                    # Replace NaN with None for JSON compatibility
+                    desc = series.describe()
                     stats.update({
-                        "mean": float(mean_val) if not pd.isna(mean_val) else None,
-                        "min": float(min_val) if not pd.isna(min_val) else None,
-                        "max": float(max_val) if not pd.isna(max_val) else None,
+                        "mean": float(desc['mean']) if not pd.isna(desc['mean']) else None,
+                        "std": float(desc['std']) if not pd.isna(desc['std']) else None,
+                        "min": float(desc['min']) if not pd.isna(desc['min']) else None,
+                        "p25": float(desc['25%']) if not pd.isna(desc['25%']) else None,
+                        "p50": float(desc['50%']) if not pd.isna(desc['50%']) else None,
+                        "p75": float(desc['75%']) if not pd.isna(desc['75%']) else None,
+                        "max": float(desc['max']) if not pd.isna(desc['max']) else None,
                     })
+                else:
+                    # Top values for Categorical
+                    top_vals = series.value_counts().head(5).to_dict()
+                    stats["top_values"] = {str(k): int(v) for k, v in top_vals.items()}
                 
                 profile[col] = stats
             return profile
